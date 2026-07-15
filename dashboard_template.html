@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>韩国流动性出清监控仪表盘 · HW-新闻哨兵</title>
+<style>
+:root, [data-theme="light"] {
+  --surface-1:#fcfcfb; --page:#f9f9f7;
+  --ink-1:#0b0b0b; --ink-2:#52514e; --ink-3:#898781;
+  --grid:#e1e0d9; --axis:#c3c2b7; --ring:rgba(11,11,11,.10);
+  --s1:#2a78d6; --s2:#1baf7a; --s3:#eda100; --s4:#008300; --s5:#4a3aa7; --s6:#e34948;
+  --good:#0ca30c; --warn:#fab219; --serious:#ec835a; --crit:#d03b3b;
+  --wash:rgba(11,11,11,.045);
+}
+[data-theme="dark"] {
+  --surface-1:#1a1a19; --page:#0d0d0d;
+  --ink-1:#ffffff; --ink-2:#c3c2b7; --ink-3:#898781;
+  --grid:#2c2c2a; --axis:#383835; --ring:rgba(255,255,255,.10);
+  --s1:#3987e5; --s2:#199e70; --s3:#c98500; --s4:#008300; --s5:#9085e9; --s6:#e66767;
+  --wash:rgba(255,255,255,.06);
+}
+* { box-sizing:border-box; }
+html,body { margin:0; padding:0; background:var(--page); color:var(--ink-1);
+  font-family:system-ui,-apple-system,"Segoe UI","Noto Sans TC","Microsoft JhengHei",sans-serif;
+  font-size:14px; line-height:1.55; }
+.wrap { max-width:1180px; margin:0 auto; padding:20px 16px 56px; }
+header.top { display:flex; flex-wrap:wrap; align-items:baseline; gap:8px 14px; margin-bottom:6px; }
+header.top h1 { font-size:20px; font-weight:700; margin:0; }
+.sub { color:var(--ink-3); font-size:12.5px; }
+.spacer { flex:1; }
+button.ghost { background:none; border:1px solid var(--ring); border-radius:8px; color:var(--ink-2);
+  padding:4px 10px; font-size:12px; cursor:pointer; white-space:nowrap; flex:none; }
+button.ghost:hover { background:var(--wash); }
+.hero { display:grid; grid-template-columns:290px 1fr; gap:14px; margin:14px 0; }
+@media (max-width:860px){ .hero { grid-template-columns:1fr; } }
+.card { background:var(--surface-1); border:1px solid var(--ring); border-radius:14px; padding:16px 18px; }
+.gauge-card { display:flex; flex-direction:column; align-items:center; }
+.tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; }
+.tile .lbl { color:var(--ink-2); font-size:12.5px; }
+.tile .val { font-size:26px; font-weight:600; margin-top:2px; }
+.tile .delta { font-size:12px; margin-top:2px; color:var(--ink-3); }
+.delta .up-bad { color:var(--crit); } .delta .down-good { color:var(--s4); }
+.chips { display:flex; flex-wrap:wrap; gap:8px; margin:2px 0 14px; }
+.chip { display:flex; align-items:center; gap:7px; border:1px solid var(--ring); border-radius:999px;
+  padding:5px 12px; font-size:12.5px; color:var(--ink-2); background:var(--surface-1); }
+.chip b { color:var(--ink-1); font-weight:600; }
+.dot { width:9px; height:9px; border-radius:50%; flex:none; }
+.filters { display:flex; align-items:center; gap:6px; margin:4px 0 12px; flex-wrap:wrap; }
+.filters .fl { color:var(--ink-3); font-size:12px; margin-right:2px; }
+.filters button { background:none; border:1px solid var(--ring); color:var(--ink-2); border-radius:8px;
+  padding:4px 12px; font-size:12.5px; cursor:pointer; }
+.filters button.on { background:var(--wash); color:var(--ink-1); font-weight:600; border-color:var(--axis); }
+.grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+@media (max-width:960px){ .grid { grid-template-columns:1fr; } }
+.card h3 { margin:0 0 2px; font-size:14.5px; font-weight:700; display:flex; align-items:center; gap:8px; }
+.card .desc { color:var(--ink-3); font-size:12px; margin-bottom:8px; }
+.card .hd { display:flex; align-items:flex-start; }
+.card .hd .spacer { flex:1; }
+.legend { display:flex; flex-wrap:wrap; gap:4px 14px; margin-top:6px; font-size:12px; color:var(--ink-2); }
+.legend .key { display:flex; align-items:center; gap:6px; }
+.key .sw { width:10px; height:10px; border-radius:3px; }
+.key .ln { width:14px; height:2px; border-radius:1px; }
+.fn { color:var(--ink-3); font-size:11.5px; margin-top:8px; }
+svg text { font-family:inherit; }
+.tick { fill:var(--ink-3); font-size:10.5px; font-variant-numeric:tabular-nums; }
+.dlabel { fill:var(--ink-2); font-size:11px; font-weight:600; }
+.tooltip { position:fixed; pointer-events:none; background:var(--surface-1); border:1px solid var(--ring);
+  border-radius:10px; padding:8px 11px; font-size:12px; box-shadow:0 4px 14px rgba(0,0,0,.14);
+  z-index:50; display:none; max-width:260px; }
+.tooltip .tt-d { color:var(--ink-3); margin-bottom:3px; font-size:11.5px; }
+.tooltip .row { display:flex; align-items:center; gap:6px; margin-top:2px; }
+.tooltip .row .v { margin-left:auto; font-weight:600; font-variant-numeric:tabular-nums; padding-left:10px; }
+.tblwrap { max-height:300px; overflow:auto; margin-top:6px; border:1px solid var(--ring); border-radius:8px; }
+table.tv { border-collapse:collapse; width:100%; font-size:12px; }
+table.tv th, table.tv td { padding:4px 9px; text-align:right; border-bottom:1px solid var(--grid);
+  font-variant-numeric:tabular-nums; white-space:nowrap; }
+table.tv th:first-child, table.tv td:first-child { text-align:left; position:sticky; left:0; background:var(--surface-1); }
+table.tv thead th { position:sticky; top:0; background:var(--surface-1); color:var(--ink-2); z-index:2; }
+.unwind { margin-top:10px; }
+.unwind .bar { height:10px; border-radius:5px; background:var(--wash); position:relative; overflow:hidden; }
+.unwind .fill { position:absolute; inset:0 auto 0 0; background:var(--s1); border-radius:5px; }
+.unwind .cap { display:flex; justify-content:space-between; font-size:11.5px; color:var(--ink-3); margin-top:4px; }
+.parts .row { display:flex; align-items:center; gap:10px; margin:7px 0; }
+.parts .nm { width:190px; font-size:12px; color:var(--ink-2); flex:none; }
+.parts .bar { flex:1; height:12px; background:var(--wash); border-radius:6px; position:relative; }
+.parts .bf { position:absolute; inset:0 auto 0 0; background:var(--s1); border-radius:6px; }
+.parts .pv { width:70px; text-align:right; font-size:12px; font-variant-numeric:tabular-nums; color:var(--ink-2); flex:none; }
+.pending { border:1px dashed var(--axis); border-radius:10px; padding:12px 14px; color:var(--ink-2); font-size:12.5px; background:var(--wash); }
+.method { font-size:12.5px; color:var(--ink-2); }
+.method h4 { margin:14px 0 4px; font-size:13px; color:var(--ink-1); }
+.method code { background:var(--wash); border-radius:4px; padding:1px 5px; font-size:11.5px; }
+details.how { margin:2px 0 8px; }
+details.how summary { cursor:pointer; font-size:12px; color:var(--s1); user-select:none; list-style:none; }
+details.how summary::before { content:'▸ '; }
+details.how[open] summary::before { content:'▾ '; }
+details.how .hb { margin-top:6px; padding:9px 12px; background:var(--wash); border-radius:9px;
+  font-size:12.5px; color:var(--ink-2); line-height:1.65; }
+#commentary p { margin:7px 0; font-size:13.5px; line-height:1.75; }
+#verdict { margin:4px 0 14px; padding:12px 16px; background:var(--wash); border-radius:11px; border-left:4px solid var(--s1); }
+#verdict:empty { display:none; }
+#verdict .v0 { font-size:11.5px; letter-spacing:.06em; color:var(--ink-3); margin-bottom:4px; }
+#verdict .v1 { font-size:14.5px; font-weight:650; line-height:1.7; }
+#verdict .v2 { font-size:12.5px; color:var(--ink-2); margin-top:6px; line-height:1.65; }
+#commentary .tag { display:inline-block; font-size:11px; color:var(--ink-3); border:1px solid var(--ring);
+  border-radius:5px; padding:0 6px; margin-right:8px; vertical-align:1px; }
+footer { color:var(--ink-3); font-size:11.5px; margin-top:22px; }
+a { color:var(--s1); text-decoration:none; }
+.zone-good { color:var(--good); } .zone-warn { color:var(--warn); }
+.zone-serious { color:var(--serious); } .zone-crit { color:var(--crit); }
+</style>
+</head>
+<body>
+<div class="wrap" id="app">
+  <header class="top">
+    <h1>韩国流动性出清监控仪表盘</h1>
+    <span class="sub" id="asof"></span>
+    <span class="spacer"></span>
+    <button class="ghost" id="themeBtn">深/浅色</button>
+  </header>
+  <div class="sub" id="genline"></div>
+  <div class="sub" style="margin-top:2px">HW-新闻哨兵 · 三星电子＋SK海力士为主体 · 红涨绿跌 · 数据源 KOFIA 金融投资协会（日度直连）</div>
+
+  <div class="hero">
+    <div class="card gauge-card">
+      <h3 style="align-self:flex-start">去杠杆压力指数</h3>
+      <div id="gauge"></div>
+      <div id="zoneLabel" style="font-size:13px;font-weight:600;margin-top:-6px"></div>
+      <div class="fn" style="text-align:center">0=出清完成 · 100=极端杠杆压力<br>综合9项子指标，方法见页尾</div>
+    </div>
+    <div class="card">
+      <div class="tiles" id="tiles"></div>
+      <div class="chips" id="chips" style="margin-top:14px"></div>
+      <div class="fn">三项关键讯号：①技术性卖压衰竭（自动判定）②外部催化剂落地（人工旗标）③监管干预力度（人工旗标）——三灯转绿之前的反弹，多属技术性反弹。</div>
+    </div>
+  </div>
+
+  <div class="card" id="commentary" style="margin-bottom:14px">
+    <div class="hd"><div><h3>本期解读</h3><div class="desc">依当期读数自动生成（定位 → 证据 → 条件），可直接复制使用。</div></div>
+    <div class="spacer"></div><button class="ghost" id="copyComm">复制</button></div>
+    <div id="verdict"></div>
+    <div id="commBody"></div>
+  </div>
+
+  <div class="filters" id="filters"><span class="fl">期间</span></div>
+  <div class="grid" id="cards"></div>
+
+  <div class="card method" style="margin-top:14px">
+    <h3>方法论与数据源</h3>
+    <div id="methodBody"></div>
+  </div>
+  <footer id="foot"></footer>
+</div>
+<div class="tooltip" id="tt"></div>
+
+<script id="pipeline-src" type="application/json">/*__SRC__*/null</script>
+<script>
+const IND = /*__DATA__*/null;
+(function(){
+if(!IND){ document.getElementById('app').innerHTML='<p style="padding:40px">尚无数据 — 请先执行数据管线。</p>'; return; }
+
+/* ---------- helpers ---------- */
+const $ = s=>document.querySelector(s);
+const el=(t,c,h)=>{const e=document.createElement(t); if(c)e.className=c; if(h!=null)e.innerHTML=h; return e;};
+const fmtD=d=>d? d.slice(0,4)+'/'+d.slice(4,6)+'/'+d.slice(6,8):'';
+const fmtN=(v,dp=1)=>v==null?'–':Number(v).toLocaleString('en-US',{minimumFractionDigits:dp,maximumFractionDigits:dp});
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+/* theme */
+const saved=null; let theme=(matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';
+document.documentElement.setAttribute('data-theme',theme);
+$('#themeBtn').onclick=()=>{theme=theme==='light'?'dark':'light';document.documentElement.setAttribute('data-theme',theme);renderAll();};
+if(matchMedia){ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',e=>{theme=e.matches?'dark':'light';document.documentElement.setAttribute('data-theme',theme);renderAll();}); }
+
+/* ---------- header ---------- */
+$('#asof').textContent='行情截至 '+fmtD(IND.asof_market||IND.asof)+'｜信用/资金截至 '+fmtD(IND.asof_credit||IND.asof)+'（KOFIA T+1 公布）';
+$('#genline').textContent='共 '+IND.n_days_total.toLocaleString()+' 个交易日 · 产出于 '+IND.generated;
+if(IND.sample){ const b=el('div',null,'⚠️ 目前显示<b>管线测试用合成数据</b>（仅末日锚点对齐真实值）— 待 KOFIA 真实历史数据载入后自动替换，数值请勿引用。');
+  b.style.cssText='margin:10px 0 2px;padding:10px 14px;border-radius:10px;font-size:13px;background:rgba(208,59,59,.10);border:1px solid rgba(208,59,59,.35);color:var(--ink-1)';
+  $('#genline').after(b); }
+else if(IND.partial){ const hasSk=IND.pctl_source&&IND.pctl_source.indexOf('快照')>=0;
+  const b=el('div',null, hasSk
+    ? '📊 全部读数均为<b>真实值</b>：日度数据（KOFIA，'+fmtD(IND.data_from)+' 起）＋ 5年百分位（'+IND.pctl_source+'，自完整历史就地计算）。完整历史档载入后将补上长期走势图。'
+    : '📊 <b>真实数据</b>（KOFIA，'+fmtD(IND.data_from)+' 起）。「5年百分位」分项暂以中性值 50 代入，<b>综合分数为暂估</b>；其余读数均为真实值。');
+  b.style.cssText='margin:10px 0 2px;padding:10px 14px;border-radius:10px;font-size:13px;background:rgba(42,120,214,.08);border:1px solid rgba(42,120,214,.35);color:var(--ink-1)';
+  $('#genline').after(b); }
+
+/* ---------- gauge ---------- */
+function gauge(score,zone){
+  const w=250,h=150,cx=w/2,cy=135,r=100,r2=86;
+  const zones=[[0,25,css('--good')],[25,45,css('--warn')],[45,70,css('--serious')],[70,100,css('--crit')]];
+  const a=v=>Math.PI*(1+v/100); // 180°..360°
+  const P=(ang,rad)=>[cx+rad*Math.cos(ang), cy+rad*Math.sin(ang)];
+  let s='<svg width="'+w+'" height="'+h+'" role="img" aria-label="压力指数 '+score+'">';
+  zones.forEach(([f,t,col])=>{
+    const gap=0.014; const a1=a(f)+(f>0?gap:0), a2=a(t)-(t<100?gap:0);
+    const [x1,y1]=P(a1,r),[x2,y2]=P(a2,r),[x3,y3]=P(a2,r2),[x4,y4]=P(a1,r2);
+    s+='<path d="M'+x1+' '+y1+' A'+r+' '+r+' 0 0 1 '+x2+' '+y2+' L'+x3+' '+y3+' A'+r2+' '+r2+' 0 0 0 '+x4+' '+y4+' Z" fill="'+col+'" opacity="0.9"/>';
+  });
+  const an=a(Math.max(0,Math.min(100,score)));
+  const [nx,ny]=P(an,r2-6);
+  s+='<line x1="'+cx+'" y1="'+cy+'" x2="'+nx+'" y2="'+ny+'" stroke="'+css('--ink-1')+'" stroke-width="2.5" stroke-linecap="round"/>';
+  s+='<circle cx="'+cx+'" cy="'+cy+'" r="5" fill="'+css('--ink-1')+'"/>';
+  s+='<text x="'+cx+'" y="'+(cy-28)+'" text-anchor="middle" style="font-size:44px;font-weight:650" fill="'+css('--ink-1')+'">'+fmtN(score,1)+'</text>';
+  ['0','25','45','70','100'].forEach(v=>{const [tx,ty]=P(a(+v),r+11);
+    s+='<text x="'+tx+'" y="'+(ty+3)+'" text-anchor="middle" class="tick">'+v+'</text>';});
+  s+='</svg>';
+  $('#gauge').innerHTML=s;
+  const zc={high:'zone-crit',mid:'zone-serious',late:'zone-warn',done:'zone-good'}[zone]||'';
+  $('#zoneLabel').innerHTML='<span class="'+zc+'">●</span> '+IND.composite.zone_label;
+}
+
+/* ---------- tiles ---------- */
+function tiles(){
+  const L=IND.latest, E=IND.latest_extra, U=IND.unwind;
+  const t=[
+    {l:'信用融资余额',v:fmtN(L.margin_total,1)+' 兆₩',d:(E.margin_d5_pct==null?'':'5日 '+(E.margin_d5_pct>0?'+':'')+E.margin_d5_pct+'%')+' · 距峰值 '+fmtN(100*(L.margin_total/U.peak-1),1)+'%',bad:E.margin_d5_pct>0},
+    {l:'融资／预托金',v:fmtN(L.margin_dep,1)+'%',d:'5年百分位 '+fmtN(E.pctl.margin_dep,0)+' · 越低=现金缓冲越足',bad:(E.pctl.margin_dep||0)>70},
+    {l:'断头比率（5日均）',v:fmtN(E.bandae_ratio_ma,1)+'%',d:'断头金额5日均 '+fmtN(E.bandae_amt_ma,0)+' 亿₩ · 百分位 '+fmtN(E.pctl.bandae_amt,0),bad:(E.pctl.bandae_amt||0)>70},
+    {l:'KOSPI 距52周最高收盘',v:fmtN(E.kospi_dd,1)+'%',d:'52周最高收盘 '+fmtN(E.kospi_hi52,0)+(E.kospi_hi52_date?'（'+fmtD(E.kospi_hi52_date).slice(5)+'）':'')+' · 现收 '+fmtN(L.kospi_idx,0)+' · 20日波动 '+fmtN(E.rv20,0)+'%',bad:(E.pctl.rv20||0)>70},
+  ];
+  $('#tiles').innerHTML='';
+  t.forEach(x=>{ const d=el('div','tile'); d.append(el('div','lbl',x.l),el('div','val',x.v),el('div','delta',x.d)); $('#tiles').append(d); });
+}
+
+/* ---------- signal chips ---------- */
+function chips(){
+  const box=$('#chips'); box.innerHTML='';
+  const map={green:css('--good'),yellow:css('--warn'),red:css('--crit'),watch:css('--ink-3')};
+  const icon={green:'✓',yellow:'△',red:'✕',watch:'…'};
+  ['s1','s2','s3'].forEach((k,i)=>{
+    const s=IND.signals[k];
+    const c=el('div','chip'); c.title=s.detail;
+    c.innerHTML='<span class="dot" style="background:'+(map[s.status]||css('--ink-3'))+'"></span><b>'+(i+1)+'·'+s.label+'</b><span>'+icon[s.status]+'</span>';
+    box.append(c);
+    const d=el('div','sub'); d.style.cssText='flex-basis:100%;margin:-4px 0 2px 4px;font-size:11.5px;color:var(--ink-3)';
+    d.textContent=s.detail; box.append(d);
+  });
+}
+
+/* ---------- chart engine ---------- */
+const D=IND.dates, S=IND.series;
+const RANGES={'6月':126,'1年':252,'3年':756,'5年':1260,'全部':1e9};
+let rangeN=252;
+function sliceIdx(){ const n=D.length; const from=Math.max(0,n-rangeN); return [from,n]; }
+function niceTicks(mn,mx,m=4){ if(mn===mx){mx=mn+1;} const span=mx-mn, step0=span/m,
+  mag=Math.pow(10,Math.floor(Math.log10(step0))), cand=[1,2,2.5,5,10].map(x=>x*mag);
+  const step=cand.find(c=>span/c<=m)||cand[4]; const lo=Math.floor(mn/step)*step, hi=Math.ceil(mx/step)*step;
+  const t=[]; for(let v=lo;v<=hi+1e-9;v+=step)t.push(+v.toFixed(10)); return t; }
+const tt=$('#tt');
+function showTT(x,y,html){ tt.innerHTML=html; tt.style.display='block';
+  const r=tt.getBoundingClientRect(); let px=x+14,py=y+14;
+  if(px+r.width>innerWidth-8)px=x-r.width-14; if(py+r.height>innerHeight-8)py=y-r.height-14;
+  tt.style.left=px+'px'; tt.style.top=py+'px'; }
+function hideTT(){ tt.style.display='none'; }
+
+function chart(host,cfg){
+  // cfg: {series:[{name,key|data,color,type:'line'|'area'|'bar'}], yFmt, refLines:[{v,label}], h}
+  host.innerHTML='';
+  const [i0,i1]=sliceIdx();
+  const W=host.clientWidth||520, H=cfg.h||210, pad={l:8,r:8,t:12,b:22};
+  const innerW=W-pad.l-pad.r;
+  const maxPts=Math.max(80,Math.floor(innerW/2.5));
+  const nRaw=i1-i0, stride=Math.max(1,Math.ceil(nRaw/maxPts));
+  const idx=[]; for(let i=i0;i<i1;i+=stride)idx.push(i); if(idx[idx.length-1]!==i1-1)idx.push(i1-1);
+  const rows=idx.map(i=>({d:D[i],vals:cfg.series.map(s=>(s.data||S[s.key])[i])}));
+  let mn=Infinity,mx=-Infinity;
+  rows.forEach(r=>r.vals.forEach(v=>{if(v!=null){mn=Math.min(mn,v);mx=Math.max(mx,v);}}));
+  (cfg.refLines||[]).forEach(r=>{mn=Math.min(mn,r.v);mx=Math.max(mx,r.v);});
+  if(!isFinite(mn)){mn=0;mx=1;}
+  if(cfg.zero&&mn>0)mn=0;
+  const ticks=niceTicks(mn,mx,4); mn=ticks[0]; mx=ticks[ticks.length-1];
+  const tickW=Math.max(...ticks.map(t=>String(cfg.yFmt?cfg.yFmt(t):t).length))*6.6+8;
+  const pl=pad.l+tickW, pw=W-pl-pad.r, ph=H-pad.t-pad.b;
+  const X=i=>pl+pw*(rows.length===1?0.5:i/(rows.length-1));
+  const Y=v=>pad.t+ph*(1-(v-mn)/(mx-mn));
+  const NS='http://www.w3.org/2000/svg';
+  const svg=document.createElementNS(NS,'svg');
+  svg.setAttribute('width',W); svg.setAttribute('height',H); svg.style.display='block';
+  const add=(p,t,at)=>{const e=document.createElementNS(NS,t); for(const k in at)e.setAttribute(k,at[k]); p.appendChild(e); return e;};
+  // grid + y ticks
+  ticks.forEach(t=>{ add(svg,'line',{x1:pl,x2:W-pad.r,y1:Y(t),y2:Y(t),stroke:css('--grid'),'stroke-width':1});
+    const tx=add(svg,'text',{x:pl-6,y:Y(t)+3.5,'text-anchor':'end','class':'tick'});
+    tx.textContent=cfg.yFmt?cfg.yFmt(t):t; });
+  add(svg,'line',{x1:pl,x2:W-pad.r,y1:Y(mn),y2:Y(mn),stroke:css('--axis'),'stroke-width':1});
+  // x labels (4)
+  const xn=Math.min(4,rows.length); for(let k=0;k<xn;k++){ const i=Math.round(k*(rows.length-1)/(xn-1||1));
+    const tx=add(svg,'text',{x:X(i),y:H-6,'text-anchor':k===0?'start':(k===xn-1?'end':'middle'),'class':'tick'});
+    tx.textContent=fmtD(rows[i].d).slice(2); }
+  // ref lines
+  (cfg.refLines||[]).forEach(r=>{ add(svg,'line',{x1:pl,x2:W-pad.r,y1:Y(r.v),y2:Y(r.v),stroke:css('--axis'),'stroke-width':1});
+    const tx=add(svg,'text',{x:pl+4,y:Y(r.v)-4,'text-anchor':'start','class':'tick'}); tx.textContent=r.label; });
+  // marks
+  const surface=css('--surface-1');
+  cfg.series.forEach((s,si)=>{
+    const col=s.color;
+    if(s.type==='bar'){
+      const bw=Math.min(24,Math.max(1.5,pw/rows.length-2));
+      rows.forEach((r,i)=>{ const v=r.vals[si]; if(v==null)return;
+        const y=Y(Math.max(0,v)), y0=Y(Math.max(0,mn)); const hgt=Math.max(1,Math.abs(Y(v)-Y(Math.max(0,mn))));
+        const rr=Math.min(4,bw/2);
+        add(svg,'path',{d:'M'+(X(i)-bw/2)+' '+(y0)+' V'+(y+rr)+' Q'+(X(i)-bw/2)+' '+y+' '+(X(i)-bw/2+rr)+' '+y+' H'+(X(i)+bw/2-rr)+' Q'+(X(i)+bw/2)+' '+y+' '+(X(i)+bw/2)+' '+(y+rr)+' V'+y0+' Z',fill:col});
+      });
+    } else {
+      let dPath='',started=false;
+      rows.forEach((r,i)=>{ const v=r.vals[si]; if(v==null){started=false;return;}
+        dPath+=(started?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1)+' '; started=true; });
+      if(s.type==='area'){ let aP=''; let firstI=null,lastI=null;
+        rows.forEach((r,i)=>{const v=r.vals[si]; if(v!=null){if(firstI==null)firstI=i;lastI=i;}});
+        if(firstI!=null){ aP=dPath+'L'+X(lastI)+' '+Y(mn)+' L'+X(firstI)+' '+Y(mn)+' Z';
+          add(svg,'path',{d:aP,fill:col,opacity:.10}); } }
+      add(svg,'path',{d:dPath,fill:'none',stroke:col,'stroke-width':2,'stroke-linecap':'round','stroke-linejoin':'round'});
+      const li=rows.length-1, lv=rows[li].vals[si];
+      if(lv!=null){ add(svg,'circle',{cx:X(li),cy:Y(lv),r:4.5,fill:col,stroke:surface,'stroke-width':2}); }
+    }
+  });
+  // crosshair + tooltip
+  const cross=add(svg,'line',{x1:0,x2:0,y1:pad.t,y2:pad.t+ph,stroke:css('--axis'),'stroke-width':1,opacity:0});
+  const hot=add(svg,'rect',{x:pl,y:pad.t,width:pw,height:ph,fill:'transparent'});
+  hot.style.cursor='crosshair';
+  function near(evX){ const rct=svg.getBoundingClientRect(); const rx=evX-rct.left;
+    let best=0,bd=1e9; rows.forEach((r,i)=>{const dd=Math.abs(X(i)-rx); if(dd<bd){bd=dd;best=i;}}); return best; }
+  hot.addEventListener('mousemove',e=>{ const i=near(e.clientX); cross.setAttribute('x1',X(i)); cross.setAttribute('x2',X(i)); cross.setAttribute('opacity',1);
+    let html='<div class="tt-d">'+fmtD(rows[i].d)+'</div>';
+    cfg.series.forEach((s,si)=>{ const v=rows[i].vals[si]; html+='<div class="row"><span class="sw" style="width:9px;height:9px;border-radius:3px;background:'+s.color+'"></span>'+s.name+'<span class="v">'+(v==null?'–':(cfg.yFmt?cfg.yFmt(v):fmtN(v)))+'</span></div>'; });
+    showTT(e.clientX,e.clientY,html); });
+  hot.addEventListener('mouseleave',()=>{cross.setAttribute('opacity',0);hideTT();});
+  host.appendChild(svg);
+  // direct end labels (≤3 series, collision-checked)
+  if(cfg.series.length>1&&cfg.series.length<=3&&cfg.series.every(s=>s.type!=='bar')){
+    const ys=cfg.series.map((s,si)=>{const v=rows[rows.length-1].vals[si];return v==null?null:Y(v);});
+    const ok=ys.every((y,i)=>y==null||ys.every((y2,j)=>i===j||y2==null||Math.abs(y-y2)>=13));
+    if(ok){ cfg.series.forEach((s,si)=>{ if(ys[si]==null)return;
+      const tx=document.createElementNS(NS,'text'); tx.setAttribute('x',W-pad.r); tx.setAttribute('y',ys[si]-8);
+      tx.setAttribute('text-anchor','end'); tx.setAttribute('class','dlabel'); tx.textContent=s.name;
+      svg.appendChild(tx); }); }
+  }
+}
+
+/* ---------- 本期解读 ---------- */
+function genComment(){
+  const C=IND.composite,U=IND.unwind,E=IND.latest_extra,P=E.pctl;
+  const zoneShort={high:'去化初中期（高压区）',mid:'去化中后期',late:'出清尾声',done:'大致出清'}[C.zone]||C.zone_label;
+  const added=U.peak-U.baseline, gave=U.peak-U.current;
+  const s1='去杠杆压力指数 '+fmtN(C.score,1)+'，处于'+zoneShort+'。出清进度这样算：本轮行情中融资余额从 '+fmtD(U.baseline_date)+' 基期的 '+fmtN(U.baseline,1)+' 兆韩元加到 '+fmtD(U.peak_date)+' 峰值 '+fmtN(U.peak,1)+' 兆，共多加 '+fmtN(added,1)+' 兆杠杆；目前 '+fmtN(U.current,1)+' 兆，已回吐 '+fmtN(gave,1)+' 兆、尚余 '+fmtN(U.excess_now,1)+' 兆未退出——出清进度 '+fmtN(gave,1)+'÷'+fmtN(added,1)+' ≈ '+(U.U*100).toFixed(0)+'%（100%＝本轮新增杠杆全数退出，非指总融资减半）。';
+  const ev=[]; const d5=E.margin_d5_pct;
+  if(d5!=null) ev.push('融资余额近 5 日 '+(d5>0?'+':'')+fmtN(d5,1)+'%'+(d5<-1?'，降杠杆仍在进行':(d5>1?'，杠杆仍在累积、出清尚未真正开始':'，初现企稳迹象')));
+  if(P.bandae_amt!=null) ev.push('断头（强制平仓）金额处 5 年第 '+Math.round(P.bandae_amt)+' 百分位'+(P.bandae_amt>=70?'，被动卖压仍强':(P.bandae_amt<=40?'，断头潮已明显退坡':'，卖压自高点回落中')));
+  if(P.margin_dep!=null) ev.push('融资/预托金比处第 '+Math.round(P.margin_dep)+' 百分位'+(P.margin_dep<=40?'，散户现金缓冲相对充裕':(P.margin_dep>=70?'，杠杆相对子弹偏紧':'')));
+  if(E.deposit_peak&&E.deposit_peak[0]&&IND.latest.deposit!=null){const dp=E.deposit_peak; const chg=100*(IND.latest.deposit/dp[0]-1); if(chg<-10) ev.push('预托金自 '+fmtD(dp[1]).slice(5)+' 高点 '+fmtN(dp[0],0)+' 兆缩至 '+fmtN(IND.latest.deposit,0)+' 兆（'+fmtN(chg,1)+'%），场内现金正在流失');}
+  if(P.bandae_amt==null&&E.bandae_peak&&E.bandae_peak[0]&&E.bandae_amt_ma!=null){const bp=E.bandae_peak; ev.push('断头金额5日均 '+fmtN(E.bandae_amt_ma,0)+' 亿，较 '+fmtD(bp[1]).slice(5)+' 单日高峰 '+fmtN(bp[0],0)+' 亿'+(E.bandae_amt_ma<bp[0]*0.4?'明显回落':'仍处高位'));}
+  if(P.rv20!=null&&P.turn_heat!=null) ev.push((P.rv20>60||P.turn_heat>60)?'波动率与成交热度仍高于历史均值，市场尚未进入风险释放后的稳定状态':'波动率与成交热度已回落至历史均值附近，市场渐趋稳定');
+  const s2=ev.join('；')+'。';
+  const miss=[];
+  if(IND.signals.s1.status!=='green') miss.push('①技术性卖压衰竭（强平与融资降速回落）');
+  if(IND.signals.s2.status!=='green') miss.push('②外部催化剂落地（大型云厂商财报）');
+  if(IND.signals.s3.status!=='green') miss.push('③监管干预明朗');
+  const s3=miss.length?('市场重新回归基本面驱动之前，仍待：'+miss.join('、')+'。'):'三项关键讯号均已亮绿，基本面重新接手的条件渐备。';
+  const s4=(IND.etf&&IND.etf.enabled)?null:'注：杠杆 ETF 分项尚未接入，上述出清进度仅计信用融资口径。';
+  return [['定位',s1],['证据',s2],['条件',s3]].concat(s4?[['注',s4]]:[]);
+}
+function genVerdict(){
+  const C=IND.composite,U=IND.unwind,E=IND.latest_extra,P=E.pctl||{};
+  const bp=E.bandae_peak&&E.bandae_peak[0];
+  const retreat=bp!=null&&E.bandae_amt_ma!=null&&E.bandae_amt_ma<bp*0.4;
+  const stable=E.margin_d5_pct!=null&&E.margin_d5_pct>-1;
+  const uPct=(U.U*100).toFixed(0);
+  let main;
+  if(C.zone==='done'){
+    main='杠杆压力已大致释放（指数 '+fmtN(C.score,0)+'，出清 '+uPct+'%），市场条件回到基本面驱动。';
+  } else if(C.zone==='late'){
+    main='去杠杆进入尾声（指数 '+fmtN(C.score,0)+'，出清 '+uPct+'%）'+(retreat?'，强制卖压已明显退潮':'')+'——可以开始关注基本面接手的讯号。';
+  } else {
+    main='去杠杆走到'+(C.zone==='high'?'初中期':'中后期')+'（指数 '+fmtN(C.score,0)+'，本轮超额杠杆已出清 '+uPct+'%）：'
+      +(retreat&&stable?'最凶的强制抛售大概率已经过去':'强制卖压尚未衰竭')
+      +((P.margin_total||0)>=90?'，但杠杆存量仍堆在历史顶部':'')
+      +((P.rv20||0)>=80?'、市场波动仍极端':'')
+      +'——出清没有完成，现阶段的反弹属技术性反弹，不是底部确认。';
+  }
+  let watch='之后每天只需盯两条线：<b>断头金额</b>与<b>融资余额</b>——两条都走平之日，就是出清接近完成之时。';
+  if(E.deposit_peak&&E.deposit_peak[0]&&IND.latest.deposit!=null){
+    const chg=100*(IND.latest.deposit/E.deposit_peak[0]-1);
+    if(chg<-10) watch+=' 另留意：散户预托金自高点已流失 '+fmtN(-chg,0)+'%，反弹的燃料在变薄。';
+  }
+  return {main,watch};
+}
+function renderComment(){
+  const v=genVerdict();
+  $('#verdict').innerHTML='<div class="v0">一句话结论</div><div class="v1">'+v.main+'</div><div class="v2">'+v.watch+'</div>';
+  const box=$('#commBody'); box.innerHTML='';
+  genComment().forEach(([tag,txt])=>{ box.append(el('p',null,'<span class="tag">'+tag+'</span>'+txt)); });
+  $('#copyComm').onclick=()=>{ const t='【结论】'+v.main+' '+v.watch.replace(/<[^>]+>/g,'')+'\n\n'+genComment().map(x=>x[1]).join('\n'); navigator.clipboard&&navigator.clipboard.writeText(t); $('#copyComm').textContent='已复制'; setTimeout(()=>$('#copyComm').textContent='复制',1500); };
+}
+
+/* ---------- cards ---------- */
+const CARDS=[
+  {id:'ci', t:'去杠杆压力指数 · 逐日走势（HW 扩展）', d:'把9项子指标合成的0-100压力指数，画成时间序列。看它从顶部回落的斜率与位置，比单个数值更能判断阶段。',
+  how:'这条线是本仪表盘顶部半圆表数值的<b>历史序列</b>。<b>70以上</b>＝去化初中期（高压）、<b>45-70</b>＝中后期、<b>25-45</b>＝尾声、<b>25以下</b>＝大致出清。看两点：<b>是否见顶回落</b>——本轮峰值到现在退了多少；<b>回落斜率</b>——快速下行＝去杠杆在兑现，走平或反弹＝出清受阻、卖压反复。三条虚线是档位分界。',
+  series:[{name:'压力指数',key:'composite_score',color:'--s1',type:'line'}],
+  yFmt:v=>fmtN(v,0),
+  refs:()=>[{v:70,label:'70 高压'},{v:45,label:'45 中后期'},{v:25,label:'25 尾声'}],
+  fn:()=>{const ss=(IND.series.composite_score||[]).filter(x=>x!=null);
+   if(!ss.length)return '';
+   const cur=ss[ss.length-1];const mx=Math.max(...ss.slice(-260));
+   return '当前指数 '+fmtN(cur,1)+'；本轮（近一年）峰值 '+fmtN(mx,1)+'，已回落 '+fmtN(mx-cur,1)+' 点。指数＝综合9项子指标（杠杆水位/出清进度/被动卖压/市场应激），权重见页尾方法论。';}},
+  
+ {id:'m', t:'信用融资余额（신용거래융자）', d:'散户杠杆主体。单位：兆韩元。参考线＝近期峰值与 4/30 行情基期。',
+  how:'这是散户向券商借钱买股的余额，本轮去杠杆的「本体」。看三点：<b>水位</b>——距峰值与 4/30 基期两条参考线的位置；<b>进度条</b>——本轮行情新增的杠杆已退出几成（100%＝这轮借的钱全数吐回）；<b>斜率</b>——曲线急跌代表强制去杠杆正在发生，走平代表卖压衰竭、进入尾声。KOSDAQ 融资盘通常更投机，去化也更剧烈，两市分列可看出清的「质」。',
+  series:[{name:'全市场',key:'margin_total',color:'--s1',type:'line'},{name:'KOSPI',key:'margin_kospi',color:'--s2',type:'line'},{name:'KOSDAQ',key:'margin_kosdaq',color:'--s3',type:'line'}],
+  yFmt:v=>fmtN(v,0), refs:()=>[{v:IND.unwind.peak,label:'峰值 '+fmtN(IND.unwind.peak,1)},{v:IND.unwind.baseline,label:'4月底基期'}],
+  extra:'unwind',
+  fn:()=>{const U=IND.unwind,added=U.peak-U.baseline,gave=U.peak-U.current;
+   return '本轮加杠杆：基期 '+fmtN(U.baseline,1)+' 兆（'+fmtD(U.baseline_date)+'）→ 峰值 '+fmtN(U.peak,1)+' 兆（'+fmtD(U.peak_date)+'），共 +'+fmtN(added,1)+' 兆；现 '+fmtN(U.current,1)+' 兆＝已回吐 '+fmtN(gave,1)+' 兆、尚余 '+fmtN(U.excess_now,1)+' 兆 → 出清 <b>'+fmtN(U.U*100,0)+'%</b>（'+fmtN(gave,1)+'÷'+fmtN(added,1)+'）';}},
+ {id:'md',t:'融资／预托金比（杠杆 vs 现金缓冲）', d:'借的钱 ÷ 帐上现金。比率下降＝散户现金缓冲相对充裕，杠杆张力比表面温和。',
+  how:'预托金＝散户放在券商帐户、还没买进股票的现金（子弹）。<b>比率下行</b>＝子弹比杠杆长得快，即使融资额创新高、实际张力也没表面紧——判断「杠杆是否被高估」的关键反向证据；<b>比率上行且预托金同时下滑</b>＝没子弹还在加杠杆，最脆弱的组合。下方预托金面积图单独看：暴跌后预托金反而跳增，常代表「跌出来的钱在场边等」。',
+  series:[{name:'融资/预托金 %',key:'margin_dep',color:'--s1',type:'line'}], yFmt:v=>fmtN(v,0)+'%',
+  panel2:{t:'投资者预托金（兆₩）',series:[{name:'预托金',key:'deposit',color:'--s2',type:'area'}],yFmt:v=>fmtN(v,0)}},
+ {id:'fb',t:'断头卖压（强制平仓）', d:'散户缴不出保证金时，券商直接砍仓卖出的金额。断头单不看价格、不问基本面——「被动卖盘」最纯粹的证据。',
+  how:'下跌自我强化的引擎就在这里：股价跌 → 保证金不足 → 券商<b>强制砍仓（断头）</b> → 卖压再压低股价 → 更多人被断头。上图长条飙高＝断头潮正在发生；<b>连续数日回落</b>＝最凶的抛压大概率已过，正是讯号①「技术性卖压衰竭」等的画面。下图比率回答「欠款的人里有多大比例被砍」——金额会随市场规模水涨船高，比率更适合跨期比较。（韩文原词 반대매매，台股俗称「断头」）',
+  series:[{name:'断头金额(亿₩)',key:'bandae_amt',color:'--s1',type:'bar'}], yFmt:v=>fmtN(v,0), zero:true,
+  panel2:{t:'断头比率＝断头金额 ÷ 散户未缴款（%，5日均）',series:[{name:'断头比率5日均',key:'bandae_ratio_ma',color:'--s6',type:'line'}],yFmt:v=>fmtN(v,1)+'%'}},
+ {id:'kx',t:'KOSPI 指数与市场应激', d:'指数走势＋20日年化已实现波动率（VKOSPI 替代，待 KRX 解锁后切换）。',
+  how:'判读基准很直接：<b>波动率回到历史均值（百分位 50）以下之前，市场仍处「主动降杠杆」阶段</b>，其间的反弹都属技术性，不是风险充分释放后的稳定状态。指数本身只是背景板——去杠杆分析里，波动率何时「熄火」比指数点位更重要。',
+  series:[{name:'KOSPI',key:'kospi_idx',color:'--s1',type:'line'}], yFmt:v=>fmtN(v,0),
+  refs:()=>[{v:6500,label:'高盛关键位 6500（3年38.2%回撤）'},{v:6000,label:'再破看 6000'}],
+  panel2:{t:'20日年化波动率 %',series:[{name:'已实现波动率',key:'rv20',color:'--s5',type:'line'}],yFmt:v=>fmtN(v,0)+'%'}},
+ {id:'tv',t:'成交热度与融资消化天数', d:'成交活跃度回到历史均值之前，代表筹码仍在激烈换手、降杠杆仍在进行。',
+  how:'成交额居高＝筹码仍在激烈换手、多空对决未分胜负；<b>回落至均值</b>＝出清接近完成的佐证之一。下方「消化天数」＝融资余额 ÷ 日成交额：若融资盘被迫全数了结，市场需要几天成交量才吞得下——<b>越低越健康</b>，急跌行情中它反而下降（分母放大），是卖压被市场吸收的迹象。',
+  series:[{name:'两市成交额(兆₩)',key:'turn_val',color:'--s1',type:'bar'}], yFmt:v=>fmtN(v,0), zero:true,
+  panel2:{t:'融资余额／日成交额（天）',series:[{name:'消化天数',key:'margin_val',color:'--s2',type:'line'}],yFmt:v=>fmtN(v,1)}},
+];
+
+function cardEl(c){
+  const d=el('div','card'); d.id='card-'+c.id;
+  const hd=el('div','hd'); const hl=el('div');
+  hl.append(el('h3',null,c.t), el('div','desc',c.d));
+  if(c.how){ const dt=el('details','how'); dt.innerHTML='<summary>怎么看这张图</summary><div class="hb">'+c.how+'</div>'; hl.append(dt); }
+  hd.append(hl, el('div','spacer'));
+  const tb=el('button','ghost','表格'); tb.onclick=()=>{c.showTable=!c.showTable; tb.textContent=c.showTable?'图表':'表格'; renderCard(c);};
+  hd.append(tb); d.append(hd);
+  d.append(el('div',null,'').appendChild(el('div')).parentElement);
+  const body=el('div'); body.className='body'; d.append(body);
+  if(c.extra==='unwind'){ const u=el('div','unwind');
+    u.innerHTML='<div class="bar"><div class="fill" style="width:'+(IND.unwind.U*100).toFixed(0)+'%"></div></div><div class="cap"><span>出清进度 '+(IND.unwind.U*100).toFixed(0)+'%</span><span>剩余超额 '+fmtN(IND.unwind.excess_now,1)+' 兆₩</span></div>';
+    d.append(u); }
+  const lg=el('div','legend'); d.append(lg);
+  const fn=el('div','fn'); d.append(fn);
+  return d;
+}
+function renderCard(c){
+  const card=$('#card-'+c.id), body=card.querySelector('.body'), lg=card.querySelector('.legend'), fn=card.querySelector('.fn');
+  body.innerHTML='';
+  const mkSeries=arr=>arr.map(s=>({...s,color:css(s.color)}));
+  if(c.showTable){
+    const [i0,i1]=sliceIdx(); const keys=[...c.series.map(s=>s.key),...(c.panel2?c.panel2.series.map(s=>s.key):[])];
+    const names=[...c.series.map(s=>s.name),...(c.panel2?c.panel2.series.map(s=>s.name):[])];
+    let h='<div class="tblwrap"><table class="tv"><thead><tr><th>日期</th>'+names.map(x=>'<th>'+x+'</th>').join('')+'</tr></thead><tbody>';
+    for(let i=i1-1;i>=i0;i--){ h+='<tr><td>'+fmtD(D[i])+'</td>'+keys.map(k=>'<td>'+(S[k][i]==null?'–':fmtN(S[k][i],2))+'</td>').join('')+'</tr>'; }
+    body.innerHTML=h+'</tbody></table></div>'; lg.innerHTML='';
+  } else {
+    const h1=el('div'); body.append(h1);
+    chart(h1,{series:mkSeries(c.series),yFmt:c.yFmt,refLines:c.refs?c.refs():null,zero:c.zero,h:c.panel2?190:230});
+    if(c.panel2){ body.append(el('div','desc',c.panel2.t));
+      const h2=el('div'); body.append(h2);
+      chart(h2,{series:mkSeries(c.panel2.series),yFmt:c.panel2.yFmt,h:120}); }
+    const allS=[...c.series,...(c.panel2?c.panel2.series:[])];
+    lg.innerHTML=allS.length>1?allS.map(s=>'<span class="key"><span class="'+(s.type==='bar'?'sw':'ln')+'" style="background:'+css(s.color)+'"></span>'+s.name+'</span>').join(''):'';
+  }
+  fn.innerHTML=c.fn?c.fn():'';
+}
+
+/* ETF pending card */
+function miniLine(dates,vals,issue,colorVar){
+  const W=520,H=210,pad={l:52,r:14,t:12,b:22};
+  const pl=pad.l,pw=W-pl-pad.r,ph=H-pad.t-pad.b;
+  const vv=vals.filter(v=>v!=null); let mn=Math.min(...vv,issue),mx=Math.max(...vv,issue);
+  const pa=(mx-mn)*0.08; mn-=pa; mx+=pa;
+  const n=vals.length;
+  const X=i=>pl+pw*(n===1?0.5:i/(n-1));
+  const Y=v=>pad.t+ph*(1-(v-mn)/(mx-mn));
+  const col=getComputedStyle(document.documentElement).getPropertyValue(colorVar).trim()||'#e34948';
+  const grid=getComputedStyle(document.documentElement).getPropertyValue('--grid').trim()||'#e1e0d9';
+  const axis=getComputedStyle(document.documentElement).getPropertyValue('--axis').trim()||'#c3c2b7';
+  const ink3=getComputedStyle(document.documentElement).getPropertyValue('--ink-3').trim()||'#898781';
+  let s='<svg width="100%" viewBox="0 0 '+W+' '+H+'" style="display:block">';
+  // y ticks (4)
+  for(let k=0;k<4;k++){const t=mn+(mx-mn)*k/3;const y=Y(t);
+    s+='<line x1="'+pl+'" x2="'+(W-pad.r)+'" y1="'+y+'" y2="'+y+'" stroke="'+grid+'"/>';
+    s+='<text x="'+(pl-6)+'" y="'+(y+3.5)+'" text-anchor="end" class="tick">'+fmtN(t,0)+'</text>';}
+  // 发行价参考线
+  s+='<line x1="'+pl+'" x2="'+(W-pad.r)+'" y1="'+Y(issue)+'" y2="'+Y(issue)+'" stroke="'+axis+'" stroke-dasharray="4 3"/>';
+  s+='<text x="'+(pl+4)+'" y="'+(Y(issue)-4)+'" class="tick">发行价 '+fmtN(issue,0)+'</text>';
+  // 折线
+  let dpath='';vals.forEach((v,i)=>{if(v!=null)dpath+=(dpath?'L':'M')+X(i)+' '+Y(v);});
+  s+='<path d="'+dpath+'" fill="none" stroke="'+col+'" stroke-width="2"/>';
+  // 末点
+  const li=n-1; if(vals[li]!=null) s+='<circle cx="'+X(li)+'" cy="'+Y(vals[li])+'" r="3.5" fill="'+col+'"/>';
+  // x labels (首末+中)
+  [0,Math.floor(n/2),n-1].forEach((i,k)=>{const dt=dates[i];const lbl=dt.slice(4,6)+'/'+dt.slice(6,8);
+    s+='<text x="'+X(i)+'" y="'+(H-6)+'" text-anchor="'+(k===0?'start':k===2?'end':'middle')+'" class="tick">'+lbl+'</text>';});
+  return s+'</svg>';
+}
+function etfCard(){
+  const d=el('div','card'); d.id='card-etf';
+  d.append(el('h3',null,'杠杆ETF出清程度（三星电子／SK海力士 单股2倍）'));
+  if(IND.etf&&IND.etf.enabled){
+    const e=IND.etf;
+    d.append(el('div','desc','单股2倍杠杆ETF共 '+e.n_total+' 档，'+e.n_broke_issue+' 档已跌破发行价。下图为规模最大的 '+e.name+' 逐日净值（5/27上市，发行价 '+fmtN(e.issue_price,0)+'）。'));
+    const dt=el('details','how'); dt.innerHTML='<summary>怎么看这张图</summary><div class="hb">杠杆 ETF 每日再平衡「越涨越买、越跌越卖」，规模够大时足以主导个股定价（极端交易日曾占个股总成交约六成）。看两个数：<b>净值距峰值萎缩</b>＝已释放的风险；<b>距发行价</b>＝散户浮亏深度（越深越接近强赎）。净值停止快速下探＝讯号①「技术性卖压衰竭」的必要条件之一。<b>重要口径</b>：本图是<b>单位净值（价格）</b>，非基金<b>规模 AUM</b>——净值跌 66% 只说明标的价格跌了（2倍杠杆×海力士跌幅），<b>不等于杠杆仓位退出 66%</b>（若散户跌中加仓，规模/敞口可能没退甚至扩）。真正的「ETF 出清程度」需<b>逐日 AUM／份额</b>（待 KRX 登入补齐），故本卡暂只报价格事实、<b>未折算成出清比例、也未计入顶部综合压力指数</b>。</div>'; d.append(dt);
+    const stat=el('div','tiles'); stat.style.margin='4px 0 10px';
+    [['净值距峰值',fmtN(e.nav_drawdown,1)+'%','峰值 '+fmtN(e.nav_peak,0)+' → 现 '+fmtN(e.nav_cur,0)],
+     ['距发行价',fmtN(e.vs_issue,1)+'%','发行价 '+fmtN(e.issue_price,0)+' 韩元'],
+     ['破发档数',e.n_broke_issue+' / '+e.n_total+' 档','单股2倍杠杆ETF 已破发行价']].forEach(([l,v,dd])=>{
+      const t=el('div','tile'); t.innerHTML='<div class="lbl">'+l+'</div><div class="val" style="font-size:22px">'+v+'</div><div class="delta">'+dd+'</div>'; stat.append(t);});
+    d.append(stat);
+    const host=el('div'); host.innerHTML=miniLine(e.nav_dates,e.nav,e.issue_price,'--s6'); d.append(host);
+    d.append(el('div','fn',e.note));
+  }
+  else {
+    d.append(el('div','desc','市场焦点指标：追踪三星电子/SK海力士的单股2倍杠杆ETF共14档，截至7/8已有13档跌破2万韩元发行价；SK海力士杠杆ETF规模自峰值167亿美元缩至78亿（-53%）。'));
+    const dt=el('details','how'); dt.innerHTML='<summary>怎么看这张图</summary><div class="hb">杠杆 ETF 每日再平衡会「越涨越买、越跌越卖」，规模够大时足以主导三星电子／SK海力士的定价（极端交易日曾占个股总成交约六成）。届时看两个数：<b>AUM 距峰值萎缩幅度</b>＝已释放的风险；<b>距 4 月底基期的剩余规模</b>＝还没退出的杠杆仓。规模停止快速萎缩，是讯号①「技术性卖压衰竭」成立的必要条件之一。</div>'; d.append(dt);
+    d.append(el('div','pending','⏳ 此模组待 KRX Data Marketplace 登入后自动补齐（逐档规模净值历史、跌破发行价家数、再平衡冲击估算）。目前综合指数未计入ETF分项（权重已重新归一）。'));
+  }
+  return d;
+}
+/* composite parts card */
+function partsCard(){
+  const d=el('div','card'); d.append(el('h3',null,'压力指数分解（各分项贡献）'));
+  d.append(el('div','desc','分项贡献＝权重 × 标准化读数；合计＝'+fmtN(IND.composite.score,1)+'。'));
+  const dt=el('details','how'); dt.innerHTML='<summary>怎么看这张图</summary><div class="hb">回答「压力主要来自哪里」：条越长＝该分项越接近其权重上限。写解读时点名最长的两三条——是<b>水位</b>还太高（杠杆存量问题）、<b>出清进度</b>太慢（时间问题）、还是<b>被动卖压／市场应激</b>正猛（当下强度问题）——叙事重点完全不同。各分项回落的先后顺序，通常也是：强平先退坡 → 波动与成交降温 → 水位百分位最后才下来。</div>'; d.append(dt);
+  const box=el('div','parts');
+  const parts=IND.composite.parts; const maxW=Math.max(...Object.values(parts),1);
+  Object.entries(parts).forEach(([k,v])=>{
+    const r=el('div','row');
+    r.innerHTML='<div class="nm">'+k+'</div><div class="bar"><div class="bf" style="width:'+(100*v/22).toFixed(1)+'%"></div></div><div class="pv">'+fmtN(v,1)+' 分</div>';
+    box.append(r); });
+  d.append(box);
+  return d;
+}
+
+/* ---------- filters ---------- */
+Object.keys(RANGES).forEach(k=>{ const b=el('button',null,k); if(RANGES[k]===rangeN)b.classList.add('on');
+  b.onclick=()=>{rangeN=RANGES[k]; document.querySelectorAll('.filters button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); renderAll();};
+  $('#filters').append(b); });
+
+/* ---------- method ---------- */
+function method(){
+  const w=IND.config.weights;
+  $('#methodBody').innerHTML=
+  '<h4>综合压力指数（0-100）</h4>四大维度九分项：杠杆水位（融资余额5年百分位 '+w.lvl_margin_pctl+'、融资/市值 '+w.lvl_mcap_pctl+'、融资/预托金 '+w.lvl_dep_pctl+'）＋出清进度（未出清比例 '+w.unwind_remaining+'、融资5日动能 '+w.momentum+'）＋被动卖压（断头金额 '+w.forced_amt_pctl+'、断头比率 '+w.forced_ratio_pctl+'）＋市场应激（波动率 '+w.vol_pctl+'、成交热度 '+w.turnover_pctl+'）。'+
+  '<h4>出清进度 U</h4><code>U =（峰值 − 目前）/（峰值 − 基期）</code>，基期预设 2026/04/30——本轮 AI 行情启动前的杠杆水位（可于 CONFIG 调整）；U=100% 表示本轮新增杠杆全数退出。'+
+  '<h4>数据源与时滞</h4>KOFIA 金融投资协会综合统计（신용거래융자·투자자예탁금·미수금·반대매매·两市指数/成交/市值，日度，1998至今）；KRX Data Marketplace（杠杆ETF，待启用）。波动率以20日已实现波动率年化替代 VKOSPI。<b>回撤口径</b>：距高点一律以「收盘对收盘」计（KOFIA 仅发布每日收盘指数）；盘中高点通常更高（例如 2026/6/19 盘中一度 9,385 vs 最高收盘 9,114），盘中口径待 KRX 指数 OHLC 接入后提供切换。<b>公布时滞</b>：指数/成交额为 KRX 当日收盘后入库；信用融资/预托金/断头数据为 KOFIA T+1 公布（实测常于次日下午更新），故信用类截止日通常比行情晚 1-2 个交易日，图上融资线尾端较指数线短属正常。'+
+  '<h4>讯号判定</h4>①技术性卖压衰竭＝断头金额5日均百分位&lt;50 且 融资5日跌幅&lt;1%（ETF启用后加入规模萎缩速度）；②③为人工旗标，依新闻更新。'+
+  '<h4>韩文术语对照</h4>신용거래융자＝信用融资（散户向券商借钱买股）；투자자예탁금＝预托金（散户帐上待投现金）；미수금＝未缴款（散户欠券商的交割/保证金款项）；반대매매＝断头（券商强制平仓卖出）。';
+  $('#foot').innerHTML='指标定义与权重可在 compute_indicators.py 的 CONFIG 调整；KOFIA 口径仅涵盖场内信用融资（不含杠杆 ETF 内含杠杆、股票质押与场外配资），信用数据为 T+1 公布。';
+}
+
+/* ---------- render all ---------- */
+function renderAll(){
+  gauge(IND.composite.score, IND.composite.zone);
+  tiles(); chips(); renderComment();
+  const cardsBox=$('#cards');
+  if(!cardsBox.dataset.built){ CARDS.forEach(c=>cardsBox.append(cardEl(c))); cardsBox.append(etfCard(),partsCard()); cardsBox.dataset.built=1; }
+  CARDS.forEach(renderCard);
+  method();
+}
+renderAll();
+let rto; addEventListener('resize',()=>{clearTimeout(rto);rto=setTimeout(renderAll,150);});
+})();
+</script>
+</body>
+</html>

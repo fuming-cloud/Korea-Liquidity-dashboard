@@ -1,1 +1,13 @@
-# Korea-Liquidity-dashboard
+# 韩国流动性出清监控仪表盘
+
+在线地址：`https://<你的用户名>.github.io/<仓库名>/`
+
+- **数据源**：KOFIA 金融投资协会综合统计（信用融资、预托金、强制平仓、两市行情，日度，1998 至今，直连 JSON 接口）+ 发行商 ETF 净值。
+- **自动更新**：每工作日（周一~五）UTC 08:40 / 韩国 17:40 由 GitHub Actions 自动抓数、重算、发布。
+- **手动触发**：Actions 页签 → 「每日更新韩国流动性出清仪表盘」→ Run workflow。
+- **管线**：`fetch_kofia.py` → `compute_indicators.py` → `build_dashboard.py` → `index.html`
+
+## 核心指标
+去杠杆压力指数（0-100，四维九分项）：杠杆水位 + 出清进度 + 被动卖压 + 市场应激。判定：≥70 去化初中期 / 45-70 中后期 / 25-45 尾声 / <25 大致出清。
+
+维护：HW-新闻哨兵
