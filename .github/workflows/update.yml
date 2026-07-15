@@ -1,0 +1,39 @@
+name: 每日更新韩国流动性出清仪表盘
+
+on:
+  schedule:
+    - cron: '40 8 * * 1-5'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: 安装依赖
+        run: pip install requests
+      - name: 抓取 KOFIA 数据
+        run: python fetch_kofia.py
+      - name: 计算指标
+        run: python compute_indicators.py data/kofia_kr_leverage_bulk.json data/krx_etf_indicators.json
+      - name: 组装仪表盘
+        run: |
+          python build_dashboard.py out/indicators.json
+          cp out/korea_deleverage_dashboard.html index.html          
+      - name: 提交更新
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "auto update" || echo "no change"
+          git push
