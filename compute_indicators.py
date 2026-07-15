@@ -304,6 +304,13 @@ def compute(bulk, etf=None, hist=None, conc=None):
               + CONFIG["weights"]["turnover_pctl"] * _pv(P["turn_heat"], i) / 100)
         score_series[i] = round(sc, 1)
 
+    # 末点对齐顶部半圆表：最后一个有效点直接用主计算的 score，
+    # 避免「逐日回算对缺失信用数据填中性50」与「顶部用最后有效值」两套口径打架。
+    for i in range(n - 1, -1, -1):
+        if score_series[i] is not None:
+            score_series[i] = score
+            break
+
     # === ETF 净值对齐主日期轴（HW 扩展）===
     _etf_nav_aligned = [None] * n
     if etf and etf.get("nav_dates") and etf.get("nav"):
